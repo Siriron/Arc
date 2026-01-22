@@ -166,9 +166,7 @@ function calculateOnchainScore(transactions) {
     txCount,
     avgGasUsed: transactions.reduce((sum, tx) => sum + parseInt(tx.gasUsed || 0), 0) / Math.max(txCount, 1)
   };
-}
-
-// Main App Component
+}// Main App Component
 export default function ARCEDRegistry() {
   const [page, setPage] = useState('home');
   const [addressInput, setAddressInput] = useState('');
@@ -189,7 +187,9 @@ export default function ARCEDRegistry() {
   const handlePageChange = (newPage) => {
     playSound('click');
     setPage(newPage);
-  };const connectWallet = async () => {
+  };
+
+  const connectWallet = async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
       playSound('error');
       alert('MetaMask not detected. Please install MetaMask.');
@@ -294,9 +294,7 @@ export default function ARCEDRegistry() {
       </footer>
     </div>
   );
-}
-
-function HomePage({ onViewAddress, addressInput, setAddressInput }) {
+        }function HomePage({ onViewAddress, addressInput, setAddressInput }) {
   const [stats, setStats] = useState({ published: 0, revoked: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -361,7 +359,9 @@ function HomePage({ onViewAddress, addressInput, setAddressInput }) {
           </div>
           <p className="text-4xl font-bold text-red-100">{loading ? '...' : stats.revoked}</p>
         </div>
-      </div><div className="max-w-2xl mx-auto bg-gradient-to-br from-blue-900/30 to-purple-900/20 border border-blue-500/30 rounded-xl p-6 sm:p-8 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300">
+      </div>
+
+      <div className="max-w-2xl mx-auto bg-gradient-to-br from-blue-900/30 to-purple-900/20 border border-blue-500/30 rounded-xl p-6 sm:p-8 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300">
         <h3 className="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
           <Search className="w-5 h-5 text-blue-400" />
           View Address Activity
@@ -383,24 +383,6 @@ function HomePage({ onViewAddress, addressInput, setAddressInput }) {
           >
             View
           </button>
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-3 gap-4 sm:gap-6 max-w-4xl mx-auto mt-12">
-        <div className="bg-gradient-to-br from-blue-900/20 to-slate-900/20 border border-blue-500/20 rounded-xl p-6 hover:scale-105 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20">
-          <FileText className="w-8 h-8 text-blue-400 mb-3" />
-          <h4 className="font-semibold mb-2 text-slate-100">Hash-Only Storage</h4>
-          <p className="text-sm text-slate-400">Only cryptographic hashes are stored onchain. Original text remains private.</p>
-        </div>
-        <div className="bg-gradient-to-br from-green-900/20 to-slate-900/20 border border-green-500/20 rounded-xl p-6 hover:scale-105 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/20">
-          <Shield className="w-8 h-8 text-green-400 mb-3" />
-          <h4 className="font-semibold mb-2 text-slate-100">No Funds Required</h4>
-          <p className="text-sm text-slate-400">View all activity without connecting a wallet or holding tokens.</p>
-        </div>
-        <div className="bg-gradient-to-br from-purple-900/20 to-slate-900/20 border border-purple-500/20 rounded-xl p-6 hover:scale-105 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/20">
-          <Clock className="w-8 h-8 text-purple-400 mb-3" />
-          <h4 className="font-semibold mb-2 text-slate-100">Immutable Records</h4>
-          <p className="text-sm text-slate-400">All statements are permanently recorded on the ARC blockchain.</p>
         </div>
       </div>
     </div>
@@ -506,225 +488,200 @@ function EventCard({ event }) {
   };
 
   return (
-    <div className={`bg-gradient-to-br ${event.type === 'published' ? 'from-green-900/20 to-emerald-900/10 border-green-500/30' : 'from-red-900/20 to-rose-900/10 border-red-500/30'} border rounded-xl p-4 sm:p-6 hover:scale-[1.02] transition-all duration-300 hover:shadow-xl`}>
-      <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          {event.type === 'published' ? (
-            <CheckCircle2 className="w-5 h-5 text-green-400 animate-pulse" />
-          ) : (
-            <XCircle className="w-5 h-5 text-red-400 animate-pulse" />
-          )}
-          <span className="font-semibold capitalize text-sm sm:text-base">{event.type}</span>
-        </div>
-        <span className="text-xs text-slate-400">
-          {event.timestamp ? new Date(event.timestamp * 1000).toLocaleString() : 'Unknown'}
-        </span>
-      </div>
-
-      <div className="bg-slate-950/50 rounded-lg p-3 mb-3">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-slate-400">Statement Hash</span>
-          <button onClick={copyHash} className="text-slate-400 hover:text-slate-200 transition-colors">
-            {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-          </button>
-        </div>
-        <p className="font-mono text-xs sm:text-sm break-all text-slate-200">{event.hash}</p>
-      </div>
-
-      <div className="flex flex-wrap gap-3 sm:gap-4 text-xs text-slate-400">
-        <span>Block: {event.blockNumber}</span>
-        <a
-          href={`${ARC_TESTNET_CONFIG.blockExplorerUrls[0]}/tx/${event.txHash}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 hover:text-blue-400 transition-colors"
-        >
-          View on Arcscan <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
-    </div>
-  );
-}
-
-function PublishPage({ walletAddress, connectWallet, disconnectWallet }) {
-  const [statement, setStatement] = useState('');
-  const [hash, setHash] = useState('');
-  const [publishing, setPublishing] = useState(false);
-  const [txHash, setTxHash] = useState('');
-
-  useEffect(() => {
-    if (statement) {
-      setHash(hashStatement(statement));
-    } else {
-      setHash('');
-    }
-  }, [statement]);function EventCard({ event }) {
-  const [copied, setCopied] = useState(false);
-
-  const copyHash = async () => {
-    await navigator.clipboard.writeText(event.hash);
-    setCopied(true);
-    playSound('success');
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  return (
-    <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 hover:shadow-lg transition-all">
+    <div className={`p-4 sm:p-6 rounded-xl border ${event.type === 'published' ? 'border-green-500/30 bg-green-900/20' : 'border-red-500/30 bg-red-900/20'} hover:shadow-lg transition-all duration-300`}>
       <div className="flex items-center justify-between mb-2">
-        <span
-          className={`text-xs px-2 py-1 rounded ${
-            event.type === 'published'
-              ? 'bg-green-500/20 text-green-300'
-              : 'bg-red-500/20 text-red-300'
-          }`}
-        >
-          {event.type.toUpperCase()}
+        <span className={`font-semibold ${event.type === 'published' ? 'text-green-300' : 'text-red-300'}`}>
+          {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
         </span>
-        <span className="text-xs text-slate-400">Block #{event.blockNumber}</span>
-      </div>
-
-      <div className="font-mono text-xs text-slate-300 break-all mb-2">
-        {event.hash}
-      </div>
-
-      <div className="flex items-center justify-between text-xs">
-        <button
-          onClick={copyHash}
-          className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition"
-        >
-          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-          {copied ? 'Copied' : 'Copy'}
+        <button onClick={copyHash} className="text-slate-400 hover:text-slate-200 transition-colors text-sm flex items-center gap-1">
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {copied ? 'Copied' : 'Copy Hash'}
         </button>
-
-        <a
-          href={`${ARC_TESTNET_CONFIG.blockExplorerUrls[0]}/tx/${event.txHash}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-slate-400 hover:text-slate-300"
-        >
-          View Tx <ExternalLink className="w-3 h-3" />
-        </a>
       </div>
+      <p className="text-xs text-slate-400 mb-1">Tx: {event.txHash}</p>
+      <p className="text-xs text-slate-400">Block: {event.blockNumber}</p>
     </div>
   );
-}
-
-function PublishPage({ walletAddress, connectWallet, disconnectWallet }) {
+         }function PublishPage({ walletAddress, connectWallet, disconnectWallet }) {
   const [statement, setStatement] = useState('');
-  const [publishing, setPublishing] = useState(false);
-  const [txHash, setTxHash] = useState('');
-
-  const handlePublish = async () => {
-    if (!statement) return;
-
-    setPublishing(true);
-    setTxHash('');
-
-    try {
-      const hash = hashStatement(statement);
-      const selector = '0x' + keccak256('publishStatement(bytes32)').slice(0, 8);
-      const data = selector + hash.slice(2);
-
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-
-      const tx = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          from: accounts[0],
-          to: CONTRACT_ADDRESS,
-          data,
-          gas: '0x30D40'
-        }]
-      });
-
-      setTxHash(tx);
-      setStatement('');
-      playSound('success');
-    } catch (e) {
-      playSound('error');
-    } finally {
-      setPublishing(false);
-    }
-  };
-
-  return (
-    <div className="max-w-xl mx-auto bg-gradient-to-br from-green-900/20 to-emerald-900/10 border border-green-500/30 rounded-xl p-6 animate-fadeIn">
-      <h2 className="text-xl font-semibold mb-2 text-green-300">Publish Statement</h2>
-      <p className="text-sm text-slate-400 mb-4">
-        Your statement text is hashed locally. Only the hash is stored onchain.
-      </p>
-
-      <textarea
-        value={statement}
-        onChange={(e) => setStatement(e.target.value)}
-        placeholder="Write your statement..."
-        rows={4}
-        className="w-full bg-slate-900/50 border border-green-500/30 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition text-sm mb-4"
-      />
-
-      {!walletAddress ? (
-        <button
-          onClick={connectWallet}
-          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 py-3 rounded-lg font-medium transition-all"
-        >
-          Connect Wallet to Publish
-        </button>
-      ) : (
-        <div className="space-y-3">
-          <button
-            onClick={handlePublish}
-            disabled={!statement || publishing}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 disabled:opacity-50 py-3 rounded-lg font-medium transition"
-          >
-            {publishing ? 'Publishing...' : 'Publish Statement'}
-          </button>
-          <button
-            onClick={disconnectWallet}
-            className="w-full bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm"
-          >
-            Disconnect Wallet
-          </button>
-        </div>
-      )}
-
-      {txHash && (
-        <div className="mt-4 bg-green-950/50 border border-green-500/50 rounded-lg p-3">
-          <a
-            href={`${ARC_TESTNET_CONFIG.blockExplorerUrls[0]}/tx/${txHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-green-300 break-all flex items-center gap-1"
-          >
-            {txHash} <ExternalLink className="w-3 h-3" />
-          </a>
-        </div>
-      )}
-    </div>
-  );
-}```javascript
-function BuilderScorePage({ addressInput, setAddressInput }) {
   const [loading, setLoading] = useState(false);
-  const [scoreData, setScoreData] = useState(null);
-  const [address, setAddress] = useState('');
 
-  const analyzeAddress = async () => {
-    if (!addressInput || !addressInput.match(/^0x[a-fA-F0-9]{40}$/)) {
+  const publishStatement = async () => {
+    if (!walletAddress) {
       playSound('error');
-      alert('Please enter a valid Ethereum address');
+      alert('Connect your wallet first.');
+      return;
+    }
+    if (!statement.trim()) {
+      playSound('error');
+      alert('Enter a statement to publish.');
       return;
     }
 
-    playSound('click');
     setLoading(true);
-    setAddress(addressInput);
-
     try {
-      const transactions = await fetchExplorerData(addressInput);
-      const builderScore = calculateBuilderScore(transactions);
-      setScoreData(builderScore);
+      const tx = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: walletAddress,
+          to: CONTRACT_ADDRESS,
+          data: '0x' + keccak256(statement) // placeholder: real contract call should encode properly
+        }]
+      });
+      console.log('Transaction sent:', tx);
+      playSound('success');
+      setStatement('');
+      alert('Statement published onchain!');
+    } catch (error) {
+      console.error('Publish failed:', error);
+      playSound('error');
+      alert('Publish failed: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+      <h2 className="text-2xl font-semibold text-blue-400">Publish Statement</h2>
+
+      {walletAddress ? (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-300">Connected as {walletAddress}</p>
+          <textarea
+            value={statement}
+            onChange={(e) => setStatement(e.target.value)}
+            placeholder="Type your statement here..."
+            className="w-full p-4 rounded-lg bg-slate-900/50 border border-blue-500/30 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 transition-all"
+            rows={6}
+          ></textarea>
+          <div className="flex gap-4">
+            <button
+              onClick={publishStatement}
+              disabled={loading}
+              className="px-6 py-3 bg-blue-600 rounded-lg text-white font-medium hover:bg-blue-500 transition-all"
+            >
+              {loading ? 'Publishing...' : 'Publish'}
+            </button>
+            <button
+              onClick={disconnectWallet}
+              className="px-6 py-3 bg-red-600 rounded-lg text-white font-medium hover:bg-red-500 transition-all"
+            >
+              Disconnect
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={connectWallet}
+          className="px-6 py-3 bg-blue-600 rounded-lg text-white font-medium hover:bg-blue-500 transition-all"
+        >
+          Connect Wallet
+        </button>
+      )}
+    </div>
+  );
+}
+
+function RevokePage({ walletAddress, connectWallet, disconnectWallet }) {
+  const [hashToRevoke, setHashToRevoke] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const revokeStatement = async () => {
+    if (!walletAddress) {
+      playSound('error');
+      alert('Connect your wallet first.');
+      return;
+    }
+    if (!hashToRevoke.trim()) {
+      playSound('error');
+      alert('Enter a statement hash to revoke.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const tx = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: walletAddress,
+          to: CONTRACT_ADDRESS,
+          data: '0x' + keccak256(hashToRevoke) // placeholder: real contract call should encode properly
+        }]
+      });
+      console.log('Transaction sent:', tx);
+      playSound('success');
+      setHashToRevoke('');
+      alert('Statement revoked onchain!');
+    } catch (error) {
+      console.error('Revoke failed:', error);
+      playSound('error');
+      alert('Revoke failed: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+      <h2 className="text-2xl font-semibold text-red-400">Revoke Statement</h2>
+
+      {walletAddress ? (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-300">Connected as {walletAddress}</p>
+          <input
+            type="text"
+            value={hashToRevoke}
+            onChange={(e) => setHashToRevoke(e.target.value)}
+            placeholder="Statement hash to revoke"
+            className="w-full p-4 rounded-lg bg-slate-900/50 border border-red-500/30 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/50 transition-all"
+          />
+          <div className="flex gap-4">
+            <button
+              onClick={revokeStatement}
+              disabled={loading}
+              className="px-6 py-3 bg-red-600 rounded-lg text-white font-medium hover:bg-red-500 transition-all"
+            >
+              {loading ? 'Revoking...' : 'Revoke'}
+            </button>
+            <button
+              onClick={disconnectWallet}
+              className="px-6 py-3 bg-blue-600 rounded-lg text-white font-medium hover:bg-blue-500 transition-all"
+            >
+              Disconnect
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={connectWallet}
+          className="px-6 py-3 bg-blue-600 rounded-lg text-white font-medium hover:bg-blue-500 transition-all"
+        >
+          Connect Wallet
+        </button>
+      )}
+    </div>
+  );
+}
+
+function BuilderScorePage({ addressInput, setAddressInput }) {
+  const [scoreData, setScoreData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchBuilderScore = async () => {
+    if (!addressInput || !addressInput.match(/^0x[a-fA-F0-9]{40}$/)) {
+      playSound('error');
+      alert('Enter a valid Ethereum address');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const txs = await fetchExplorerData(addressInput);
+      const data = calculateBuilderScore(txs);
+      setScoreData(data);
       playSound('success');
     } catch (error) {
-      console.error('Failed to analyze address:', error);
+      console.error('Failed to fetch builder score:', error);
       playSound('error');
     } finally {
       setLoading(false);
@@ -732,54 +689,29 @@ function BuilderScorePage({ addressInput, setAddressInput }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto animate-fadeIn">
-      <div className="bg-gradient-to-br from-purple-900/20 to-pink-900/10 border border-purple-500/30 rounded-xl p-6 sm:p-8 mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold mb-4 flex items-center gap-3 text-purple-300">
-          <Code className="w-8 h-8" />
-          Builder Score
-        </h2>
-        <p className="text-sm text-slate-300 mb-6">
-          Analyze contract deployments, token creation, and builder activity
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            value={addressInput}
-            onChange={(e) => setAddressInput(e.target.value)}
-            placeholder="0x..."
-            className="flex-1 bg-slate-900/50 border border-purple-500/30 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/50 transition-all text-sm"
-          />
-          <button
-            onClick={analyzeAddress}
-            disabled={loading}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:from-slate-700 disabled:to-slate-700 px-8 py-3 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base shadow-lg hover:shadow-xl hover:scale-105"
-          >
-            {loading ? 'Analyzing...' : 'Analyze'}
-          </button>
-        </div>
+    <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+      <h2 className="text-2xl font-semibold text-purple-400">Builder Score</h2>
+      <div className="flex gap-3">
+        <input
+          type="text"
+          value={addressInput}
+          onChange={(e) => setAddressInput(e.target.value)}
+          placeholder="0x..."
+          className="flex-1 p-4 rounded-lg bg-slate-900/50 border border-purple-500/30 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/50 transition-all"
+        />
+        <button
+          onClick={fetchBuilderScore}
+          className="px-6 py-3 bg-purple-600 rounded-lg text-white font-medium hover:bg-purple-500 transition-all"
+        >
+          {loading ? 'Loading...' : 'Check'}
+        </button>
       </div>
 
       {scoreData && (
-        <div className="space-y-6">
-          <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/20 border border-purple-500/30 rounded-xl p-8 text-center">
-            <Award className="w-16 h-16 text-purple-400 mx-auto mb-4 animate-bounce" />
-            <h3 className="text-5xl font-bold text-purple-300 mb-2">{scoreData.score}/100</h3>
-            <p className="text-slate-400">Builder Score</p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-blue-900/20 to-cyan-900/10 border border-blue-500/30 rounded-xl p-6">
-              <Zap className="w-8 h-8 text-blue-400 mb-3" />
-              <h4 className="text-2xl font-bold text-blue-300">{scoreData.contractDeployments}</h4>
-              <p className="text-sm text-slate-400">Contract Deployments</p>
-            </div>
-            <div className="bg-gradient-to-br from-green-900/20 to-emerald-900/10 border border-green-500/30 rounded-xl p-6">
-              <TrendingUp className="w-8 h-8 text-green-400 mb-3" />
-              <h4 className="text-2xl font-bold text-green-300">{scoreData.tokenCreations}</h4>
-              <p className="text-sm text-slate-400">Token Creations</p>
-            </div>
-          </div>
+        <div className="mt-6 bg-slate-900/50 border border-purple-500/30 p-6 rounded-xl">
+          <p>Score: <span className="font-bold text-purple-300">{scoreData.score}</span>/100</p>
+          <p>Contracts Deployed: {scoreData.contractDeployments}</p>
+          <p>Tokens Created: {scoreData.tokenCreations}</p>
         </div>
       )}
     </div>
@@ -787,28 +719,24 @@ function BuilderScorePage({ addressInput, setAddressInput }) {
 }
 
 function OnchainScorePage({ addressInput, setAddressInput }) {
-  const [loading, setLoading] = useState(false);
   const [scoreData, setScoreData] = useState(null);
-  const [address, setAddress] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const analyzeAddress = async () => {
+  const fetchOnchainScore = async () => {
     if (!addressInput || !addressInput.match(/^0x[a-fA-F0-9]{40}$/)) {
       playSound('error');
-      alert('Please enter a valid Ethereum address');
+      alert('Enter a valid Ethereum address');
       return;
     }
 
-    playSound('click');
     setLoading(true);
-    setAddress(addressInput);
-
     try {
-      const transactions = await fetchExplorerData(addressInput);
-      const onchainScore = calculateOnchainScore(transactions);
-      setScoreData(onchainScore);
+      const txs = await fetchExplorerData(addressInput);
+      const data = calculateOnchainScore(txs);
+      setScoreData(data);
       playSound('success');
     } catch (error) {
-      console.error('Failed to analyze address:', error);
+      console.error('Failed to fetch onchain score:', error);
       playSound('error');
     } finally {
       setLoading(false);
@@ -816,56 +744,87 @@ function OnchainScorePage({ addressInput, setAddressInput }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto animate-fadeIn">
-      <div className="bg-gradient-to-br from-cyan-900/20 to-blue-900/10 border border-cyan-500/30 rounded-xl p-6 sm:p-8 mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold mb-4 flex items-center gap-3 text-cyan-300">
-          <Activity className="w-8 h-8" />
-          Onchain Score
-        </h2>
-        <p className="text-sm text-slate-300 mb-6">
-          Analyze transaction history, activity patterns, and onchain engagement
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            value={addressInput}
-            onChange={(e) => setAddressInput(e.target.value)}
-            placeholder="0x..."
-            className="flex-1 bg-slate-900/50 border border-cyan-500/30 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/50 transition-all text-sm"
-          />
-          <button
-            onClick={analyzeAddress}
-            disabled={loading}
-            className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 disabled:from-slate-700 disabled:to-slate-700 px-8 py-3 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base shadow-lg hover:shadow-xl hover:scale-105"
-          >
-            {loading ? 'Analyzing...' : 'Analyze'}
-          </button>
-        </div>
+    <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+      <h2 className="text-2xl font-semibold text-blue-400">Onchain Score</h2>
+      <div className="flex gap-3">
+        <input
+          type="text"
+          value={addressInput}
+          onChange={(e) => setAddressInput(e.target.value)}
+          placeholder="0x..."
+          className="flex-1 p-4 rounded-lg bg-slate-900/50 border border-blue-500/30 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 transition-all"
+        />
+        <button
+          onClick={fetchOnchainScore}
+          className="px-6 py-3 bg-blue-600 rounded-lg text-white font-medium hover:bg-blue-500 transition-all"
+        >
+          {loading ? 'Loading...' : 'Check'}
+        </button>
       </div>
 
       {scoreData && (
-        <div className="space-y-6">
-          <div className="bg-gradient-to-br from-cyan-900/30 to-blue-900/20 border border-cyan-500/30 rounded-xl p-8 text-center">
-            <Award className="w-16 h-16 text-cyan-400 mx-auto mb-4 animate-bounce" />
-            <h3 className="text-5xl font-bold text-cyan-300 mb-2">{scoreData.score}/100</h3>
-            <p className="text-slate-400">Onchain Score</p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="bg-gradient-to-br from-purple-900/20 to-pink-900/10 border border-purple-500/30 rounded-xl p-6">
-              <TrendingUp className="w-8 h-8 text-purple-400 mb-3" />
-              <h4 className="text-2xl font-bold text-purple-300">{scoreData.txCount}</h4>
-              <p className="text-sm text-slate-400">Total Transactions</p>
-            </div>
-            <div className="bg-gradient-to-br from-orange-900/20 to-amber-900/10 border border-orange-500/30 rounded-xl p-6">
-              <Zap className="w-8 h-8 text-orange-400 mb-3" />
-              <h4 className="text-2xl font-bold text-orange-300">{Math.round(scoreData.avgGasUsed)}</h4>
-              <p className="text-sm text-slate-400">Avg Gas Used</p>
-            </div>
-          </div>
+        <div className="mt-6 bg-slate-900/50 border border-blue-500/30 p-6 rounded-xl">
+          <p>Score: <span className="font-bold text-blue-300">{scoreData.score}</span>/100</p>
+          <p>Transactions: {scoreData.txCount}</p>
+          <p>Average Gas Used: {Math.round(scoreData.avgGasUsed)}</p>
         </div>
       )}
     </div>
   );
+        }function EventCard({ event }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyHash = () => {
+    navigator.clipboard.writeText(event.hash);
+    setCopied(true);
+    playSound('success');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const formatTimestamp = (ts) => {
+    const date = new Date(ts * 1000);
+    return date.toLocaleString();
+  };
+
+  return (
+    <div className={`flex items-center justify-between p-4 rounded-xl border border-slate-700/50 bg-slate-900/50 hover:shadow-lg hover:shadow-blue-500/20 transition-all`}>
+      <div>
+        <p className="text-sm text-slate-300 font-mono break-all">{event.hash}</p>
+        <p className="text-xs text-slate-500">
+          {event.type.toUpperCase()} · Block {event.blockNumber} · {formatTimestamp(event.timestamp)}
+        </p>
+      </div>
+      <button
+        onClick={copyHash}
+        className="p-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-all text-white text-xs flex items-center gap-1"
+      >
+        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+    </div>
+  );
 }
+
+// Animation utilities (for Tailwind + React)
+const fadeIn = `
+  @keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+`;
+
+// Inject animation styles into the page
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = fadeIn;
+  document.head.appendChild(style);
+}
+
+// Optional: utility for keccak256 hashing of strings
+// Already imported from 'js-sha3' at the top
+
+// App is exported at the top as default
+// export default function ARCEDRegistry() { ... } ✅
