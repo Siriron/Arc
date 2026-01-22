@@ -1,32 +1,195 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, Shield, FileText, Clock, Search, ExternalLink, Code, Award, Zap, TrendingUp, Activity } from 'lucide-react';
-import { keccak256 } from 'js-sha3';
-import { hashStatement, getLogs, getBlockNumber, EVENT_SIGNATURES, CONTRACT_ADDRESS, ARC_TESTNET_CONFIG, fetchExplorerData, calculateBuilderScore, calculateOnchainScore } from './utils';
-import './globals.css';
+'use client'
 
-export default function Home() {
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, FileText, Shield, Clock, ExternalLink, CheckCircle2, XCircle, Copy, Check, AlertCircle, Award, TrendingUp, Zap, Code, Activity } from 'lucide-react';
+import { keccak256 } from 'js-sha3';
+
+// ARC Testnet Configuration
+const ARC_TESTNET_CONFIG = {
+  chainId: '0x4CEF52',
+  chainName: 'Arc Network Testnet',
+  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+  rpcUrls: ['https://rpc.testnet.arc.network'],
+  blockExplorerUrls: ['https://testnet.arcscan.app'],
+  apiUrl: 'https://testnet.arcscan.app/api'
+};
+
+// Contract Configuration
+const CONTRACT_ADDRESS = '0xd2d97209aFd34B9865fda1eA7B0c390395321B32';
+
+// Event signatures
+const EVENT_SIGNATURES = {
+  StatementPublished: '0x' + keccak256('StatementPublished(address,bytes32,uint256)'),
+  StatementRevoked: '0x' + keccak256('StatementRevoked(address,bytes32,uint256)')
+};
+
+// Sound effects
+const playSound = (type) => {
+  if (typeof window === 'undefined') return;
+  
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+  
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  
+  switch(type) {
+    case 'success':
+      oscillator.frequency.value = 800;
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+      break;
+    case 'click':
+      oscillator.frequency.value = 400;
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.1);
+      break;
+    case 'error':
+      oscillator.frequency.value = 200;
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+      break;
+  }
+};
+
+// RPC Helper Functions
+async function rpcCall(method, params = []) {
+  const response = await fetch(ARC_TESTNET_CONFIG.rpcUrls[0], {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method,
+      params
+    })
+  });
+  
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.result;
+}
+
+async function getBlockNumber() {
+  const hex = await rpcCall('eth_blockNumber');
+  return parseInt(hex, 16);
+}
+
+async function getLogs(params) {
+  return await rpcCall('eth_getLogs', [params]);
+}
+
+// Fetch ARC Explorer API data
+async function fetchExplorerData(address) {
+  try {
+    const response = await fetch(`${ARC_TESTNET_CONFIG.apiUrl}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=desc`);
+    const data = await response.json();
+    return data.result || [];
+  } catch (error) {
+    console.error('Explorer API error:', error);
+    return [];
+  }
+}
+
+// Hash a statement
+function hashStatement(text) {
+  return '0x' + keccak256(text);
+}
+
+// Calculate Builder Score
+function calculateBuilderScore(transactions) {
+  let score = 0;
+  let contractDeployments = 0;
+  let tokenCreations = 0;
+  
+  transactions.forEach(tx => {
+    // Contract deployment (to address is null/empty)
+    if (!tx.to || tx.to === '0x0000000000000000000000000000000000000000') {
+      contractDeployments++;
+      score += 15;
+    }
+    
+    // Token creation (ERC20/ERC721 events)
+    if (tx.input && tx.input.length > 200) {
+      tokenCreations++;
+      score += 10;
+    }
+  });
+  
+  // Bonus for consistency
+  if (contractDeployments > 5) score += 20;
+  if (tokenCreations > 3) score += 15;
+  
+  return {
+    score: Math.min(score, 100),
+    contractDeployments,
+    tokenCreations
+  };
+}
+
+// Calculate Onchain Score
+function calculateOnchainScore(transactions) {
+  let score = 0;
+  const txCount = transactions.length;
+  
+  // Transaction count score (max 40 points)
+  score += Math.min(txCount * 2, 40);
+  
+  // Time frame analysis
+  if (txCount > 0) {
+    const timestamps = transactions.map(tx => parseInt(tx.timeStamp)).sort();
+    const firstTx = timestamps[0];
+    const lastTx = timestamps[timestamps.length - 1];
+    const daysDiff = (lastTx - firstTx) / (24 * 60 * 60);
+    
+    // Activity duration score (max 30 points)
+    if (daysDiff > 30) score += 30;
+    else if (daysDiff > 7) score += 20;
+    else if (daysDiff > 1) score += 10;
+    
+    // Consistency score (max 30 points)
+    const avgTxPerDay = txCount / Math.max(daysDiff, 1);
+    if (avgTxPerDay > 5) score += 30;
+    else if (avgTxPerDay > 2) score += 20;
+    else if (avgTxPerDay > 0.5) score += 10;
+  }
+  
+  return {
+    score: Math.min(score, 100),
+    txCount,
+    avgGasUsed: transactions.reduce((sum, tx) => sum + parseInt(tx.gasUsed || 0), 0) / Math.max(txCount, 1)
+  };
+}
+
+// Main App Component
+export default function ARCEDRegistry() {
   const [page, setPage] = useState('home');
-  const [walletAddress, setWalletAddress] = useState('');
   const [addressInput, setAddressInput] = useState('');
   const [viewAddress, setViewAddress] = useState('');
-
-  const handlePageChange = (newPage) => {
-    setPage(newPage);
-    playSound('click');
-  };
+  const [walletAddress, setWalletAddress] = useState('');
 
   const handleViewAddress = (addr) => {
-    setViewAddress(addr);
+    if (!addr || !addr.match(/^0x[a-fA-F0-9]{40}$/)) {
+      playSound('error');
+      alert('Please enter a valid Ethereum address');
+      return;
+    }
+    playSound('click');
+    setViewAddress(addr.toLowerCase());
     setPage('viewer');
   };
 
-  const playSound = (type) => {
-    // Placeholder: Implement your sound logic
-    console.log('Sound:', type);
-  };
-
-  const connectWallet = async () => {
+  const handlePageChange = (newPage) => {
+    playSound('click');
+    setPage(newPage);
+  };const connectWallet = async () => {
     if (typeof window === 'undefined' || !window.ethereum) {
       playSound('error');
       alert('MetaMask not detected. Please install MetaMask.');
@@ -181,7 +344,24 @@ function HomePage({ onViewAddress, addressInput, setAddressInput }) {
         <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto px-4">
           View immutable statements published to the ARC testnet. No wallet required.
         </p>
-      </div>      <div className="max-w-2xl mx-auto bg-gradient-to-br from-blue-900/30 to-purple-900/20 border border-blue-500/30 rounded-xl p-6 sm:p-8 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300">
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl mx-auto">
+        <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/10 border border-green-500/30 rounded-xl p-6 hover:scale-105 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/20">
+          <div className="flex items-center gap-3 mb-2">
+            <CheckCircle2 className="w-6 h-6 text-green-400 animate-pulse" />
+            <h3 className="text-sm font-medium text-green-300">Statements Published</h3>
+          </div>
+          <p className="text-4xl font-bold text-green-100">{loading ? '...' : stats.published}</p>
+        </div>
+        <div className="bg-gradient-to-br from-red-900/30 to-rose-900/10 border border-red-500/30 rounded-xl p-6 hover:scale-105 transition-all duration-300 hover:shadow-xl hover:shadow-red-500/20">
+          <div className="flex items-center gap-3 mb-2">
+            <XCircle className="w-6 h-6 text-red-400 animate-pulse" />
+            <h3 className="text-sm font-medium text-red-300">Statements Revoked</h3>
+          </div>
+          <p className="text-4xl font-bold text-red-100">{loading ? '...' : stats.revoked}</p>
+        </div>
+      </div><div className="max-w-2xl mx-auto bg-gradient-to-br from-blue-900/30 to-purple-900/20 border border-blue-500/30 rounded-xl p-6 sm:p-8 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300">
         <h3 className="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
           <Search className="w-5 h-5 text-blue-400" />
           View Address Activity
@@ -313,7 +493,9 @@ function AddressViewer({ address }) {
       )}
     </div>
   );
-}function EventCard({ event }) {
+}
+
+function EventCard({ event }) {
   const [copied, setCopied] = useState(false);
 
   const copyHash = () => {
@@ -376,238 +558,151 @@ function PublishPage({ walletAddress, connectWallet, disconnectWallet }) {
     } else {
       setHash('');
     }
-  }, [statement]);
+  }, [statement]);function EventCard({ event }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyHash = async () => {
+    await navigator.clipboard.writeText(event.hash);
+    setCopied(true);
+    playSound('success');
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="bg-slate-900/50 border border-slate-700/50 rounded-xl p-4 hover:shadow-lg transition-all">
+      <div className="flex items-center justify-between mb-2">
+        <span
+          className={`text-xs px-2 py-1 rounded ${
+            event.type === 'published'
+              ? 'bg-green-500/20 text-green-300'
+              : 'bg-red-500/20 text-red-300'
+          }`}
+        >
+          {event.type.toUpperCase()}
+        </span>
+        <span className="text-xs text-slate-400">Block #{event.blockNumber}</span>
+      </div>
+
+      <div className="font-mono text-xs text-slate-300 break-all mb-2">
+        {event.hash}
+      </div>
+
+      <div className="flex items-center justify-between text-xs">
+        <button
+          onClick={copyHash}
+          className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition"
+        >
+          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+
+        <a
+          href={`${ARC_TESTNET_CONFIG.blockExplorerUrls[0]}/tx/${event.txHash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-slate-400 hover:text-slate-300"
+        >
+          View Tx <ExternalLink className="w-3 h-3" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function PublishPage({ walletAddress, connectWallet, disconnectWallet }) {
+  const [statement, setStatement] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  const [txHash, setTxHash] = useState('');
 
   const handlePublish = async () => {
-    if (typeof window === 'undefined' || !window.ethereum || !hash) return;
+    if (!statement) return;
 
     setPublishing(true);
     setTxHash('');
 
     try {
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-      if (accounts.length === 0) {
-        alert('Please connect your wallet first');
-        setPublishing(false);
-        playSound('error');
-        return;
-      }
+      const hash = hashStatement(statement);
+      const selector = '0x' + keccak256('publishStatement(bytes32)').slice(0, 8);
+      const data = selector + hash.slice(2);
 
-      const functionSelector = '0x' + keccak256('publishStatement(bytes32)').slice(0, 8);
-      const data = functionSelector + hash.slice(2);
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
 
       const tx = await window.ethereum.request({
         method: 'eth_sendTransaction',
         params: [{
           from: accounts[0],
           to: CONTRACT_ADDRESS,
-          data: data,
+          data,
           gas: '0x30D40'
         }]
       });
 
       setTxHash(tx);
-      playSound('success');
-      alert('Statement published! Transaction: ' + tx);
       setStatement('');
-    } catch (error) {
-      console.error('Publish failed:', error);
+      playSound('success');
+    } catch (e) {
       playSound('error');
-      alert('Failed to publish: ' + error.message);
     } finally {
       setPublishing(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto animate-fadeIn">
-      <div className="bg-gradient-to-br from-green-900/20 to-emerald-900/10 border border-green-500/30 rounded-xl p-6 sm:p-8 hover:shadow-2xl transition-all">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-green-300">Publish Statement</h2>
-        <p className="text-sm text-slate-300 mb-6">
-          Enter your statement below. Only the cryptographic hash will be stored onchain.
-        </p>
+    <div className="max-w-xl mx-auto bg-gradient-to-br from-green-900/20 to-emerald-900/10 border border-green-500/30 rounded-xl p-6 animate-fadeIn">
+      <h2 className="text-xl font-semibold mb-2 text-green-300">Publish Statement</h2>
+      <p className="text-sm text-slate-400 mb-4">
+        Your statement text is hashed locally. Only the hash is stored onchain.
+      </p>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">Your Statement</label>
-            <textarea
-              value={statement}
-              onChange={(e) => setStatement(e.target.value)}
-              placeholder="Enter your statement here..."
-              className="w-full bg-slate-900/50 border border-green-500/30 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-400/50 transition-all min-h-32 text-sm"
-            />
-          </div>
+      <textarea
+        value={statement}
+        onChange={(e) => setStatement(e.target.value)}
+        placeholder="Write your statement..."
+        rows={4}
+        className="w-full bg-slate-900/50 border border-green-500/30 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-green-400/50 transition text-sm mb-4"
+      />
 
-          {hash && (
-            <div className="bg-slate-950/50 border border-green-500/30 rounded-lg p-4 animate-fadeIn">
-              Statement Hash (stored onchain)
-              {hash}
-            </div>
-          )}
-
-          {!walletAddress ? (
-            <button
-              onClick={connectWallet}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 py-3 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base shadow-lg hover:shadow-xl hover:scale-105"
-            >
-              Connect Wallet to Publish
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <div className="bg-slate-950/50 border border-green-500/30 rounded-lg p-3">
-                <p className="text-xs text-slate-400 mb-1">Connected Wallet</p>
-                <p className="font-mono text-xs sm:text-sm text-green-300 break-all">{walletAddress}</p>
-              </div>
-              <button
-                onClick={handlePublish}
-                disabled={!statement || publishing}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed py-3 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base shadow-lg hover:shadow-xl hover:scale-105"
-              >
-                {publishing ? 'Publishing...' : 'Publish Statement'}
-              </button>
-              <button
-                onClick={disconnectWallet}
-                className="w-full bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm transition-all"
-              >
-                Disconnect Wallet
-              </button>
-            </div>
-          )}
-
-          {txHash && (
-            <div className="bg-green-950/50 border border-green-500/50 rounded-lg p-4 animate-fadeIn">
-              <p className="text-sm text-green-400 mb-2">✓ Transaction submitted</p>
-              <a
-                href={`${ARC_TESTNET_CONFIG.blockExplorerUrls[0]}/tx/${txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-green-300 hover:text-green-200 flex items-center gap-1 break-all transition-colors"
-              >
-                {txHash} <ExternalLink className="w-3 h-3 flex-shrink-0" />
-              </a>
-            </div>
-          )}
+      {!walletAddress ? (
+        <button
+          onClick={connectWallet}
+          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 py-3 rounded-lg font-medium transition-all"
+        >
+          Connect Wallet to Publish
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <button
+            onClick={handlePublish}
+            disabled={!statement || publishing}
+            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 disabled:opacity-50 py-3 rounded-lg font-medium transition"
+          >
+            {publishing ? 'Publishing...' : 'Publish Statement'}
+          </button>
+          <button
+            onClick={disconnectWallet}
+            className="w-full bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm"
+          >
+            Disconnect Wallet
+          </button>
         </div>
-      </div>
+      )}
+
+      {txHash && (
+        <div className="mt-4 bg-green-950/50 border border-green-500/50 rounded-lg p-3">
+          <a
+            href={`${ARC_TESTNET_CONFIG.blockExplorerUrls[0]}/tx/${txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-green-300 break-all flex items-center gap-1"
+          >
+            {txHash} <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
     </div>
   );
-}function RevokePage({ walletAddress, connectWallet, disconnectWallet }) {
-  const [hash, setHash] = useState('');
-  const [revoking, setRevoking] = useState(false);
-  const [txHash, setTxHash] = useState('');
-
-  const handleRevoke = async () => {
-    if (typeof window === 'undefined' || !window.ethereum || !hash || !hash.match(/^0x[a-fA-F0-9]{64}$/)) {
-      playSound('error');
-      alert('Please enter a valid 32-byte hash (0x + 64 hex characters)');
-      return;
-    }
-
-    setRevoking(true);
-    setTxHash('');
-
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-      if (accounts.length === 0) {
-        alert('Please connect your wallet first');
-        setRevoking(false);
-        playSound('error');
-        return;
-      }
-
-      const functionSelector = '0x' + keccak256('revokeStatement(bytes32)').slice(0, 8);
-      const data = functionSelector + hash.slice(2);
-
-      const tx = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          from: accounts[0],
-          to: CONTRACT_ADDRESS,
-          data: data,
-          gas: '0x30D40'
-        }]
-      });
-
-      setTxHash(tx);
-      playSound('success');
-      alert('Statement revoked! Transaction: ' + tx);
-      setHash('');
-    } catch (error) {
-      console.error('Revoke failed:', error);
-      playSound('error');
-      alert('Failed to revoke: ' + error.message);
-    } finally {
-      setRevoking(false);
-    }
-  };
-
-  return (
-    <div className="max-w-2xl mx-auto animate-fadeIn">
-      <div className="bg-gradient-to-br from-red-900/20 to-rose-900/10 border border-red-500/30 rounded-xl p-6 sm:p-8 hover:shadow-2xl transition-all">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-red-300">Revoke Statement</h2>
-        <p className="text-sm text-slate-300 mb-6">
-          Enter the statement hash you want to revoke. You must be the original author.
-        </p>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2 text-slate-300">Statement Hash</label>
-            <input
-              type="text"
-              value={hash}
-              onChange={(e) => setHash(e.target.value)}
-              placeholder="0x..."
-              className="w-full bg-slate-900/50 border border-red-500/30 rounded-lg px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/50 transition-all font-mono text-xs sm:text-sm"
-            />
-          </div>
-
-          {!walletAddress ? (
-            <button
-              onClick={connectWallet}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 py-3 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base shadow-lg hover:shadow-xl hover:scale-105"
-            >
-              Connect Wallet to Revoke
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <div className="bg-slate-950/50 border border-red-500/30 rounded-lg p-3">
-                <p className="text-xs text-slate-400 mb-1">Connected Wallet</p>
-                <p className="font-mono text-xs sm:text-sm text-red-300 break-all">{walletAddress}</p>
-              </div>
-              <button
-                onClick={handleRevoke}
-                disabled={!hash || revoking}
-                className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed py-3 rounded-lg font-medium transition-all duration-300 text-sm sm:text-base shadow-lg hover:shadow-xl hover:scale-105"
-              >
-                {revoking ? 'Revoking...' : 'Revoke Statement'}
-              </button>
-              <button
-                onClick={disconnectWallet}
-                className="w-full bg-slate-700 hover:bg-slate-600 py-2 rounded-lg text-sm transition-all"
-              >
-                Disconnect Wallet
-              </button>
-            </div>
-          )}
-
-          {txHash && (
-            <div className="bg-red-950/50 border border-red-500/50 rounded-lg p-4 animate-fadeIn">
-              <p className="text-sm text-red-400 mb-2">✓ Transaction submitted</p>
-              <a
-                href={`${ARC_TESTNET_CONFIG.blockExplorerUrls[0]}/tx/${txHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-red-300 hover:text-red-200 flex items-center gap-1 break-all transition-colors"
-              >
-                {txHash} <ExternalLink className="w-3 h-3 flex-shrink-0" />
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}function BuilderScorePage({ addressInput, setAddressInput }) {
+}```javascript
+function BuilderScorePage({ addressInput, setAddressInput }) {
   const [loading, setLoading] = useState(false);
   const [scoreData, setScoreData] = useState(null);
   const [address, setAddress] = useState('');
